@@ -21,12 +21,13 @@ public class ImagePixelizer {
         this.squareSize = squareSize;
         this.originalImage = ImageIO.read(new File(fileName));
 
-        // Scaling image
         this.scaledImage = scaleImage(originalImage);
 
         // System.out.println(Runtime.getRuntime().availableProcessors());
-        service = Executors.newSingleThreadExecutor();
+        service = processingMode == 'S' ? Executors.newSingleThreadExecutor()
+                : Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
+        // Setup the GUI
         SwingUtilities.invokeLater(() -> {
             frame = new JFrame("Image Processing Progress");
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -42,8 +43,8 @@ public class ImagePixelizer {
     private BufferedImage scaleImage(BufferedImage img) {
         // Getting the screen dimensions
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        double maxWidth = screenSize.getWidth() - 10;
-        double maxHeight = screenSize.getHeight() - 10;
+        double maxWidth = screenSize.getWidth() - 50;
+        double maxHeight = screenSize.getHeight() - 50;
 
         // Trying to maintian aspect ratio
         double scaleFactor = Math.min(1d, Math.min(maxWidth / img.getWidth(), maxHeight / img.getHeight()));
@@ -65,20 +66,59 @@ public class ImagePixelizer {
     public void processImage() {
         int width = originalImage.getWidth();
         int height = originalImage.getHeight();
+        // System.out.println(width);
 
-        for (int y = 0; y < height; y += squareSize) {
-            for (int x = 0; x < width; x += squareSize) {
-                final int fx = x;
-                final int fy = y;
+        int updateFrequency = 3;
+
+        // Multi-threaded mode - division to strips
+        if (service instanceof java.util.concurrent.ThreadPoolExecutor) {
+            int cores = Runtime.getRuntime().availableProcessors();
+            int heightPerCore = height / cores;
+
+            for (int i = 0; i < cores; i++) {
+                final int startY = i * heightPerCore;
+                final int endY = (i == cores - 1) ? height : (startY + heightPerCore);
+
                 service.submit(() -> {
-                    setColor(fx, fy);
-                    SwingUtilities.invokeLater(() -> imageLabel.setIcon(new ImageIcon(scaledImage)));
+                    for (int y = startY; y < endY; y += squareSize) {
+                        for (int x = 0; x < width; x += squareSize) {
+                            synchronized (originalImage) {
+                                setColor(x, y);
+                            }
+                            // System.out.println()
+                            if ((x / squareSize) % updateFrequency == 0) {
+                                BufferedImage stripCopy;
+                                synchronized (originalImage) {
+                                    stripCopy = new BufferedImage(scaledImage.getWidth(), scaledImage.getHeight(),
+                                            BufferedImage.TYPE_INT_RGB);
+                                    Graphics2D graphics = stripCopy.createGraphics();
+                                    graphics.drawImage(originalImage, 0, 0, scaledImage.getWidth(),
+                                            scaledImage.getHeight(), null);
+                                    graphics.dispose();
+                                }
+                                final BufferedImage toDisplay = stripCopy;
+                                SwingUtilities.invokeLater(() -> imageLabel.setIcon(new ImageIcon(toDisplay)));
+                            }
+                        }
+                    }
                 });
+            }
+
+            // Single-threaded mode
+        } else {
+            for (int y = 0; y < height; y += squareSize) {
+                for (int x = 0; x < width; x += squareSize) {
+                    final int fx = x;
+                    final int fy = y;
+                    service.submit(() -> {
+                        setColor(fx, fy);
+                        SwingUtilities.invokeLater(() -> imageLabel.setIcon(new ImageIcon(scaledImage)));
+                    });
+                }
             }
         }
 
         service.shutdown();
-
         try {
             if (service.awaitTermination(1, TimeUnit.HOURS)) {
                 ImageIO.write(scaledImage, "jpg", new File("result.jpg"));
