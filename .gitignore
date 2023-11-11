@@ -1,0 +1,5 @@
+# Ignore JPEG images
+*.jpg
+
+# Ignore Java compiled class files
+*.class
