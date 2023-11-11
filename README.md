@@ -44,7 +44,7 @@ You can also download all the codes from Github as a Zip file.
 javac Main.java
 
 ```
-Input format should be: java Main.java <filename> <square size> <processing mode>
+Input format should be: java Main.java "filename" "square size" "processing mode"
 
 ```bash
 
