@@ -23,6 +23,7 @@ public class ImagePixelizer {
         this.originalImage = ImageIO.read(new File(fileName));
         this.scaledImage = scaleImage(originalImage);
 
+        // Checking the input mode from user
         service = processingMode == 'S' ? Executors.newSingleThreadExecutor()
                 : Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
@@ -39,6 +40,7 @@ public class ImagePixelizer {
         });
     }
 
+    // Useing scaleImage() from utils to scale the image
     private BufferedImage scaleImage(BufferedImage img) {
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         double maxWidth = screenSize.getWidth() - 50;
@@ -53,21 +55,24 @@ public class ImagePixelizer {
         int updateFrequency = 3;
 
         // Multi-threaded mode - division to strips
+
         if (service instanceof java.util.concurrent.ThreadPoolExecutor) {
             int cores = Runtime.getRuntime().availableProcessors();
             int heightPerCore = height / cores;
 
             for (int i = 0; i < cores; i++) {
-                final int startY = i * heightPerCore;
-                final int endY = (i == cores - 1) ? height : (startY + heightPerCore);
+                final int startOfY = i * heightPerCore;
+                final int endOfY = (i == cores - 1) ? height : (startOfY + heightPerCore);
 
                 service.submit(() -> {
-                    for (int y = startY; y < endY; y += squareSize) {
+                    for (int y = startOfY; y < endOfY; y += squareSize) {
                         for (int x = 0; x < width; x += squareSize) {
                             synchronized (originalImage) {
                                 setColor(x, y);
                             }
-                            // System.out.println()
+
+                            // Checking for update and creating synchronized copy of the scaled image
+
                             if ((x / squareSize) % updateFrequency == 0) {
                                 BufferedImage stripCopy;
                                 synchronized (originalImage) {
@@ -103,7 +108,7 @@ public class ImagePixelizer {
         service.shutdown();
         try {
             if (service.awaitTermination(1, TimeUnit.HOURS)) {
-                ImageIO.write(scaledImage, "jpg", new File("result.jpg"));
+                ImageIO.write(scaledImage, "jpg", new File("pixelizedresult.jpg"));
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -130,11 +135,13 @@ public class ImagePixelizer {
             }
         }
 
+        // Creating new color
         int averageRed = (int) (sumRed / count);
         int averageGreen = (int) (sumGreen / count);
         int averageBlue = (int) (sumBlue / count);
         int averageColor = new Color(averageRed, averageGreen, averageBlue).getRGB();
 
+        // Setting new color
         for (int ix = x; ix < maxX; ix++) {
             for (int iy = y; iy < maxY; iy++) {
                 originalImage.setRGB(ix, iy, averageColor);

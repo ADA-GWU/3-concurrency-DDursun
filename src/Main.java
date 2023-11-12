@@ -4,7 +4,8 @@ public class Main {
     public static void main(String[] args) {
         if (args.length != 3) {
             System.out
-                    .println("Input format should be: java ImagePixelizer <filename> <square size> <processing mode>");
+                    .println(
+                            "Input format should be: java ImagePixelizer 'path_to_file' 'square size' 'processing mode (S or M)'");
             System.exit(1);
         }
 
