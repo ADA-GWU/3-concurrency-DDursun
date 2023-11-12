@@ -8,11 +8,14 @@
 
 
 ## About the assignment
--
+The task includes image processing and usage of multiple threads in order to pixelize the provided image. The application has 2 modes 'S' and 'M', single and multi-threading, respectively. The pixelization is done in 2 modes according to the running mode:
+
+- Single thread: Left to right, top to bottom
+- Multi thread: Division into n strips (n being number of availible threads), and processing from left to right
 
 
 ## Prerequisites
-All the codes in this repository is written in  Java programming language. In order to test the codes, Java should be installed in the system. Following the steps and is necessary for running the codes.
+All the codes in this repository is written in  Java programming language. In order to use the application, Java should be installed in the system. Following the steps and is necessary for running the codes.
 
 #### Installing Java
 
